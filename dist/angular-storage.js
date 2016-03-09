@@ -34,7 +34,8 @@ angular.module('angular-storage.internalStore', ['angular-storage.localStorage',
       this.delimiter = delimiter || '.';
       this.inMemoryCache = {};
       this.storage = $injector.get(storage || 'localStorage');
-    }
+      this.sessionStorage = $injector.get('sessionStorage');
+  }
 
     InternalStore.prototype.getNamespacedKey = function(key) {
       if (!this.namespace) {
@@ -44,17 +45,16 @@ angular.module('angular-storage.internalStore', ['angular-storage.localStorage',
       }
     };
 
-    InternalStore.prototype.set = function(name, elem) {
+    function set(name,elem,type) {
       this.inMemoryCache[name] = elem;
-      this.storage.set(this.getNamespacedKey(name), JSON.stringify(elem));
-    };
-
-    InternalStore.prototype.get = function(name) {
+      type.set(this.getNamespacedKey(name), JSON.stringify(elem));
+    }
+    function get(name,type) {
       var obj = null;
       if (name in this.inMemoryCache) {
         return this.inMemoryCache[name];
       }
-      var saved = this.storage.get(this.getNamespacedKey(name));
+      var saved = type.get(this.getNamespacedKey(name));
       try {
 
         if (typeof saved === 'undefined' || saved === 'undefined') {
@@ -69,13 +69,36 @@ angular.module('angular-storage.internalStore', ['angular-storage.localStorage',
         this.remove(name);
       }
       return obj;
+    }
+    function remove(name,type) {
+      this.inMemoryCache[name] = null;
+      type.remove(this.getNamespacedKey(name));
+    }
+
+
+    InternalStore.prototype.set = function(name, elem) {
+      set.apply(this,name,elem,this.storage);
+    };
+
+    InternalStore.prototype.get = function(name) {
+      return get.apply(this,name,this.storage);
     };
 
     InternalStore.prototype.remove = function(name) {
-      this.inMemoryCache[name] = null;
-      this.storage.remove(this.getNamespacedKey(name));
+      remove.apply(this,name,this.storage);
+    };
+    InternalStore.prototype.setSession = function(name, elem) {
+      set.apply(this,name,elem,this.sessionStorage);
     };
 
+    InternalStore.prototype.getSession = function(name) {
+      return get.apply(this,name,this.sessionStorage);
+    };
+
+    InternalStore.prototype.removeSession = function(name) {
+      remove.apply(this,name,this.sessionStorage);
+    };
+    
     return InternalStore;
   }]);
 
